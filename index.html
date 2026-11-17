@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이화 메일 필터 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#00462A; --green-2:#0b6b45; --green-soft:#e8f2ec; --green-line:#b9d6c4;
+    --line:#e2e7e4; --ink:#1b2420; --sub:#5b6a63; --mute:#9aa5a0;
+    --bg:#f4f7f5; --card:#fff; --warn:#8a5a00; --warn-bg:#fff6e0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Noto Sans KR",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;font-size:15px}
+  .wrap{max-width:920px;margin:0 auto;padding:40px 20px 120px}
+
+  /* header */
+  header h1{font-size:30px;margin:0 0 10px;color:var(--green);letter-spacing:-0.6px}
+  header p{margin:0;color:var(--sub);max-width:640px}
+  .flow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}
+  .flow a{display:flex;gap:10px;align-items:center;padding:12px 14px;background:#fff;border:1px solid var(--line);border-radius:12px;text-decoration:none;color:var(--ink)}
+  .flow a:hover{border-color:var(--green-line)}
+  .flow .n{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .flow b{display:block;font-size:14px}
+  .flow small{color:var(--sub);font-size:12px}
+
+  /* sections */
+  section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;margin-top:22px;scroll-margin-top:16px}
+  section > h2{margin:0 0 6px;font-size:20px;display:flex;align-items:center;gap:10px}
+  section > h2 .n{display:inline-flex;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-size:15px;align-items:center;justify-content:center}
+  .desc{color:var(--sub);margin:0 0 18px;font-size:14px}
+
+  /* toolbar */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px;background:var(--bg);border-radius:12px}
+  .toolbar input[type=search]{flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+  .toolbar input[type=search]:focus{outline:2px solid var(--green-line);border-color:var(--green-2)}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:#fff;padding:9px 14px;color:var(--ink)}
+  button:hover{border-color:var(--green-2)}
+  button.primary{background:var(--green);border-color:var(--green);color:#fff;font-weight:700;padding:12px 22px}
+  button.primary:hover{background:var(--green-2)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+
+  /* groups */
+  .group{margin-top:26px}
+  .group-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .group-head h3{margin:0;font-size:16px}
+  .group-head .gc{font-size:13px;color:var(--sub);background:var(--bg);padding:1px 9px;border-radius:999px}
+  .group-head button{margin-left:auto;font-size:12px;padding:4px 12px;border-radius:999px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .item{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1.5px solid var(--green-line);background:#f6fbf8;border-radius:12px;cursor:pointer;transition:background .12s,border-color .12s}
+  .item:hover{border-color:var(--green-2)}
+  .item input{width:18px;height:18px;accent-color:var(--green);flex-shrink:0;margin:0}
+  .item .txt{min-width:0}
+  .item .dept{font-weight:700;font-size:15px;line-height:1.35}
+  .item .addr{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--sub);word-break:break-all}
+  .item.off{background:#fff;border-color:var(--line)}
+  .item.off .dept{color:var(--mute);font-weight:500}
+  .item.off .addr{color:var(--mute)}
+  .item .state{margin-left:auto;flex-shrink:0;font-size:12px;font-weight:500;color:var(--green)}
+  .item.off .state{color:var(--mute)}
+  .empty{color:var(--sub);text-align:center;padding:30px 0}
+
+  .add{display:flex;gap:8px;margin-top:26px;padding-top:20px;border-top:1px dashed var(--line);flex-wrap:wrap}
+  .add input{flex:1;min-width:220px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  .err{color:#b3261e;font-size:13px;margin-top:6px;min-height:1em}
+
+  /* download */
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .summary{font-size:14px;color:var(--sub);margin-left:4px}
+  .summary b{color:var(--green);font-size:16px}
+  .notice{margin-top:14px;padding:12px 14px;border-radius:10px;font-size:14px;display:none}
+  .notice.show{display:block}
+  .notice.ok{background:var(--green-soft);color:var(--green)}
+  .notice.warn{background:var(--warn-bg);color:var(--warn)}
+  details.preview{margin-top:16px}
+  details.preview summary{cursor:pointer;color:var(--sub);font-size:14px}
+  pre{background:#0f1a15;color:#d7e8de;padding:14px;border-radius:10px;font-size:12px;overflow:auto;max-height:280px;margin-top:8px}
+
+  /* guide */
+  ol.guide{margin:0;padding-left:0;list-style:none;counter-reset:g}
+  ol.guide li{counter-increment:g;position:relative;padding:14px 0 14px 46px;border-top:1px dashed var(--line)}
+  ol.guide li:first-child{border-top:none;padding-top:4px}
+  ol.guide li:first-child::before{top:4px}
+  ol.guide li::before{content:counter(g);position:absolute;left:0;top:14px;width:30px;height:30px;border-radius:8px;background:var(--green-soft);color:var(--green);font-weight:700;display:flex;align-items:center;justify-content:center}
+  ol.guide b{color:var(--green)}
+  .ui{display:inline-block;padding:0 7px;border:1px solid var(--line);border-radius:6px;background:#f6f8f7;font-size:13px;font-weight:500}
+  .callout{margin-top:6px;padding:10px 14px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-size:14px}
+
+  .faq h4{margin:18px 0 4px;font-size:15px}
+  .faq h4:first-of-type{margin-top:8px}
+  .faq p{margin:0;color:var(--sub);font-size:14px}
+  footer{margin-top:28px;font-size:12px;color:#8a968f;text-align:center}
+  a{color:var(--green-2)}
+
+  /* sticky bar */
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);border-top:1px solid var(--line);backdrop-filter:blur(6px);z-index:10}
+  .bar .in{max-width:920px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
+  .bar .t{font-size:14px;color:var(--sub)}
+  .bar .t b{color:var(--green);font-size:18px}
+  .bar button{margin-left:auto}
+
+  @media (max-width:640px){
+    .flow{grid-template-columns:1fr}
+    .grid{grid-template-columns:1fr}
+    section{padding:20px 16px}
+    header h1{font-size:25px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>이화 메일 필터 만들기</h1>
+    <p>학교에서 오는 홍보·행사 메일을 자동으로 휴지통에 넣는 Gmail 필터입니다. 계속 받고 싶은 부서는 체크를 풀고, 필터 파일을 받아 Gmail에서 가져오기만 하면 됩니다.</p>
+    <nav class="flow">
+      <a href="#pick"><span class="n">1</span><span><b>차단할 부서 고르기</b><small>기본값: 전체 차단</small></span></a>
+      <a href="#get"><span class="n">2</span><span><b>필터 파일 받기</b><small>mailFilters.xml</small></span></a>
+      <a href="#apply"><span class="n">3</span><span><b>Gmail에 적용하기</b><small>PC 웹에서 1분</small></span></a>
+    </nav>
+  </header>
+
+  <section id="pick">
+    <h2><span class="n">1</span>차단할 부서 고르기</h2>
+    <p class="desc">초록색으로 표시된 부서의 메일이 차단됩니다. 계속 받고 싶은 부서는 눌러서 해제하세요.</p>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="부서 이름이나 메일 주소로 찾기">
+      <button id="allOn">전체 선택</button>
+      <button id="allOff">전체 해제</button>
+    </div>
+    <div id="groups"></div>
+    <div class="add">
+      <input id="newAddr" placeholder="목록에 없는 주소 추가: 예) news@ewha.ac.kr">
+      <button id="addBtn">추가</button>
+    </div>
+    <div class="err" id="addErr"></div>
+  </section>
+
+  <section id="get">
+    <h2><span class="n">2</span>필터 파일 받기</h2>
+    <p class="desc">선택한 주소마다 "이 주소에서 온 메일 삭제" 필터가 하나씩 들어간 파일을 만듭니다. 파일은 이 브라우저 안에서 만들어지며, 선택 내용은 어디에도 전송되지 않습니다.</p>
+    <div class="actions">
+      <button class="primary" id="dl">필터 파일 다운로드</button>
+      <button id="cp">XML 내용 복사</button>
+      <span class="summary"><b class="cnt">0</b>개 주소 차단</span>
+    </div>
+    <div class="notice" id="note"></div>
+    <details class="preview"><summary>파일 내용 미리보기</summary><pre id="pv"></pre></details>
+  </section>
+
+  <section id="apply">
+    <h2><span class="n">3</span>Gmail에 적용하기</h2>
+    <div class="callout">PC 웹 브라우저의 Gmail에서만 됩니다. 휴대폰 Gmail 앱에는 이 메뉴가 없습니다. 학교 계정(@ewha.ac.kr)으로 로그인했는지 먼저 확인하세요.</div>
+    <ol class="guide" style="margin-top:16px">
+      <li><a href="https://mail.google.com/" target="_blank" rel="noopener">Gmail</a>을 열고 왼쪽 메뉴 아래쪽의 <span class="ui">더보기</span>를 누릅니다.</li>
+      <li>펼쳐진 메뉴에서 <span class="ui">라벨 관리</span>를 누릅니다.</li>
+      <li>상단 탭에서 <span class="ui">필터 및 차단된 주소</span>를 엽니다.</li>
+      <li>화면을 아래로 내리면 필터 목록 아래에 있는 <span class="ui">필터 가져오기</span>를 누릅니다.</li>
+      <li><span class="ui">파일 선택</span>을 누르고 2단계에서 저장한 <b>mailFilters.xml</b> 파일을 선택하면 적용이 끝납니다. 확인 화면이 나오면 <span class="ui">필터 만들기</span>를 누르세요.</li>
+    </ol>
+  </section>
+
+  <section class="faq">
+    <h2>자주 묻는 질문</h2>
+    <h4>삭제된 메일을 되살릴 수 있나요?</h4>
+    <p>휴지통으로 이동한 메일은 30일 동안 보관된 뒤 자동으로 영구 삭제됩니다. 그 전에는 휴지통에서 꺼낼 수 있습니다.</p>
+    <h4>특정 부서의 메일을 다시 받고 싶어요.</h4>
+    <p>Gmail <span class="ui">더보기 → 라벨 관리 → 필터 및 차단된 주소</span>에서 해당 주소의 필터를 체크하고 <span class="ui">삭제</span>를 누르면 됩니다.</p>
+    <h4>필터를 두 번 가져오면 어떻게 되나요?</h4>
+    <p>같은 필터가 중복으로 생깁니다. 동작에는 문제가 없지만, 목록이 지저분해지면 중복된 것을 지우세요.</p>
+  </section>
+
+  <footer>이화여대 학생이 만든 비공식 도구입니다. 학교와 관련이 없습니다.</footer>
+</div>
+
+<div class="bar"><div class="in">
+  <span class="t"><b class="cnt">0</b> / <span id="tot">0</span>개 주소 차단 중</span>
+  <button class="primary" id="dl2">필터 파일 다운로드</button>
+</div></div>
+
+<script>
+// 형식: ["메일 주소", "부서 이름"]
+const DATA = [
+  {g:"연구소", items:[
+    ["hazardliteracy@ewha.ac.kr","해저드리터러시융합교육연구소"],
+    ["eih@ewha.ac.kr","이화인문과학원"],
+    ["ewhaacademy@ewha.ac.kr","이화학술원"],
+    ["tongil@ewha.ac.kr","통일학연구원"],
+    ["kwiewha@ewha.ac.kr","한국여성연구원"],
+    ["acwsewha@ewha.ac.kr","아시아여성학센터"],
+    ["eip@ewha.ac.kr","철학연구소"],
+    ["eiop0925@ewha.ac.kr","이화정치연구소"],
+    ["smartliving@ewha.ac.kr","스마트리빙연구소"],
+  ]},
+  {g:"산학협력·창업", items:[
+    ["yungu@ewha.ac.kr","산학협력단"],
+    ["research@ewha.ac.kr","산학협력단"],
+    ["startup@ewha.ac.kr","창업지원단"],
+  ]},
+  {g:"교육·비교과 프로그램", items:[
+    ["academy@ewha.ac.kr","교육기획팀"],
+    ["future@ewha.ac.kr","미래혁신센터"],
+    ["cetl@ewha.ac.kr","교육혁신센터"],
+    ["itl@ewha.ac.kr","교육혁신센터"],
+    ["epo@ewha.ac.kr","글로벌소통교육실"],
+    ["elc@ewha.ac.kr","언어교육원"],
+    ["sce@ewha.ac.kr","평생교육원"],
+    ["ewhase4317@ewha.ac.kr","사회적경제협동과정"],
+    ["press@ewha.ac.kr","출판문화원"],
+  ]},
+  {g:"학생 지원", items:[
+    ["healthservice@ewha.ac.kr","대학건강센터"],
+    ["ESCC@ewha.ac.kr","학생상담센터"],
+    ["humanrights@ewha.ac.kr","인권센터"],
+    ["infoserv@ewha.ac.kr","중앙도서관 학술정보서비스팀"],
+    ["sscenter@ewha.ac.kr","사회봉사팀"],
+  ]},
+  {g:"박물관", items:[
+    ["museum@ewha.ac.kr","이화여자대학교 박물관"],
+    ["museumedu@ewha.ac.kr","이화여자대학교 박물관 (교육)"],
+    ["nhm@ewha.ac.kr","자연사박물관"],
+  ]},
+  {g:"체육·복지 시설", items:[
+    ["e600210@ewha.ac.kr","사회체육교육센터"],
+    ["blossom96@ewha.ac.kr","사회체육교육센터"],
+    ["ewhacwc@ewha.ac.kr","종합사회복지관"],
+  ]},
+];
+const CUSTOM = "직접 추가";
+
+const state = new Map(); // key(소문자 주소) -> {addr, dept, group, on}
+DATA.forEach(g => g.items.forEach(([a,d]) => state.set(a.toLowerCase(), {addr:a, dept:d, group:g.g, on:true})));
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+
+function groupsInOrder(){
+  const order = DATA.map(g => g.g);
+  if ([...state.values()].some(v => v.group === CUSTOM)) order.push(CUSTOM);
+  return order;
+}
+
+function render(){
+  const q = $('q').value.trim().toLowerCase();
+  const box = $('groups'); box.innerHTML = '';
+  for (const gname of groupsInOrder()){
+    const rows = [...state.values()].filter(v => v.group === gname &&
+      (!q || v.addr.toLowerCase().includes(q) || v.dept.toLowerCase().includes(q)));
+    if (!rows.length) continue;
+    const onCount = rows.filter(r => r.on).length;
+    const el = document.createElement('div'); el.className = 'group';
+    el.innerHTML = `<div class="group-head"><h3>${esc(gname)}</h3><span class="gc">${onCount}/${rows.length} 차단</span>
+      <button data-g="${esc(gname)}">${onCount === rows.length ? '그룹 전체 해제' : '그룹 전체 선택'}</button></div>`;
+    const grid = document.createElement('div'); grid.className = 'grid';
+    for (const r of rows){
+      const lab = document.createElement('label');
+      lab.className = 'item' + (r.on ? '' : ' off');
+      lab.innerHTML = `<input type="checkbox" ${r.on ? 'checked' : ''} data-a="${esc(r.addr.toLowerCase())}">
+        <span class="txt"><div class="dept">${esc(r.dept)}</div><div class="addr">${esc(r.addr)}</div></span>
+        <span class="state">${r.on ? '차단' : '받기'}</span>`;
+      grid.appendChild(lab);
+    }
+    el.appendChild(grid);
+    box.appendChild(el);
+  }
+  if (!box.children.length) box.innerHTML = '<p class="empty">검색 결과가 없습니다.</p>';
+  updateCount();
+}
+
+function updateCount(){
+  const all = [...state.values()];
+  const on = all.filter(v => v.on).length;
+  document.querySelectorAll('.cnt').forEach(e => e.textContent = on);
+  $('tot').textContent = all.length;
+  $('dl').disabled = $('dl2').disabled = $('cp').disabled = on === 0;
+  $('pv').textContent = on ? buildXML() : '선택된 주소가 없습니다.';
+}
+
+function buildXML(){
+  const sel = [...state.values()].filter(v => v.on);
+  const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const base = Date.now();
+  const entries = sel.map((v,i) => `	<entry>
+		<category term='filter'></category>
+		<title>Mail Filter</title>
+		<id>tag:mail.google.com,2008:filter:z${base + i}</id>
+		<updated>${now}</updated>
+		<content></content>
+		<apps:property name='from' value='${esc(v.addr)}'/>
+		<apps:property name='shouldTrash' value='true'/>
+		<apps:property name='sizeOperator' value='s_sl'/>
+		<apps:property name='sizeUnit' value='s_smb'/>
+	</entry>`).join('\n');
+  return `<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom' xmlns:apps='http://schemas.google.com/apps/2006'>
+	<title>Mail Filters</title>
+	<id>tag:mail.google.com,2008:filters:${sel.map((_,i) => 'z' + (base + i)).join(',')}</id>
+	<updated>${now}</updated>
+	<author>
+		<name>Ewha Mail Filter</name>
+		<email>noreply@example.com</email>
+	</author>
+${entries}
+</feed>
+`;
+}
+
+function note(msg, kind){ const n = $('note'); n.className = 'notice show ' + kind; n.innerHTML = msg; }
+
+$('groups').addEventListener('change', e => {
+  const a = e.target.dataset.a; if (!a) return;
+  state.get(a).on = e.target.checked; render();
+});
+$('groups').addEventListener('click', e => {
+  const g = e.target.dataset && e.target.dataset.g; if (!g) return;
+  e.preventDefault();
+  const rows = [...state.values()].filter(v => v.group === g);
+  const turnOn = !rows.every(r => r.on);
+  rows.forEach(r => r.on = turnOn); render();
+});
+$('q').addEventListener('input', render);
+$('allOn').onclick = () => { state.forEach(v => v.on = true); render(); };
+$('allOff').onclick = () => { state.forEach(v => v.on = false); render(); };
+
+function addAddr(){
+  const raw = $('newAddr').value.trim().replace(/^@/, '');
+  $('addErr').textContent = '';
+  if (!/^([^\s@]+@)?[^\s@]+\.[^\s@]+$/.test(raw)) { $('addErr').textContent = '메일 주소(news@ewha.ac.kr) 또는 도메인(example.com) 형식으로 입력하세요.'; return; }
+  const key = raw.toLowerCase();
+  if (state.has(key)) { state.get(key).on = true; $('addErr').textContent = '이미 목록에 있는 주소라 선택만 했습니다.'; }
+  else state.set(key, {addr:raw, dept: raw.includes('@') ? '직접 추가한 주소' : '직접 추가한 도메인 (이 도메인의 모든 메일)', group:CUSTOM, on:true});
+  $('newAddr').value = ''; render();
+}
+$('addBtn').onclick = addAddr;
+$('newAddr').addEventListener('keydown', e => { if (e.key === 'Enter') addAddr(); });
+
+async function download(){
+  const xml = buildXML();
+  const inClaude = typeof window.claude !== 'undefined' && typeof window.claude.use === 'function';
+  if (!inClaude){
+    const url = URL.createObjectURL(new Blob([xml], {type:'application/xml'}));
+    const a = document.createElement('a'); a.href = url; a.download = 'mailFilters.xml';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    note('<b>mailFilters.xml</b> 파일을 받았습니다. 3단계로 넘어가세요.', 'ok');
+    return;
+  }
+  let d = null;
+  try { d = await window.claude.use('downloads'); } catch(e) {}
+  if (!d){ note('이 화면에서는 파일 다운로드를 쓸 수 없습니다. <b>XML 내용 복사</b>를 눌러 메모장에 붙여넣고 <b>mailFilters.xml</b>로 저장하세요.', 'warn'); return; }
+  try {
+    await d.save({filename:'mailFilters.txt', data:xml});
+    note('<b>mailFilters.txt</b>로 저장했습니다. 이 화면에서는 .xml 확장자로 바로 받을 수 없으니, 파일 이름을 <b>mailFilters.xml</b>로 바꾼 뒤 3단계에서 선택하세요.', 'warn');
+  } catch(e){
+    if (e && e.code === 'declined') note('저장을 취소했습니다.', 'warn');
+    else note('파일을 저장하지 못했습니다. <b>XML 내용 복사</b>를 눌러 메모장에 붙여넣고 <b>mailFilters.xml</b>로 저장하세요.', 'warn');
+  }
+}
+$('dl').onclick = download;
+$('dl2').onclick = () => { download(); $('get').scrollIntoView({behavior:'smooth'}); };
+
+$('cp').onclick = async () => {
+  try { await navigator.clipboard.writeText(buildXML());
+    note('복사했습니다. 메모장(Mac은 텍스트 편집기의 "일반 텍스트" 모드)에 붙여넣고 <b>mailFilters.xml</b>로 저장하세요.', 'ok');
+  } catch(e){ $('get').querySelector('details').open = true; note('자동 복사가 막혀 있습니다. 아래 미리보기 내용을 직접 선택해 복사하세요.', 'warn'); }
+};
+
+render();
+</script>
+</body>
+</html>
